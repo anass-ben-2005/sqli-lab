@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Library System{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <div class="page-wrapper">
+    <!-- Top Navigation -->
+    {% if session.user %}
+    <nav class="top-nav" style="position: relative;">
+      <div class="nav-inner">
+        <!-- Brand -->
+        <a href="{{ url_for('dashboard') }}" class="nav-brand">
+          LibraryMS
+        </a>
+
+        <!-- Center Navigation -->
+        <div class="nav-links">
+          <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            Dashboard
+          </a>
+          <a href="{{ url_for('books') }}" class="nav-link {% if request.endpoint == 'books' %}active{% endif %}">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            Books
+          </a>
+          <a href="{{ url_for('loans') }}" class="nav-link {% if request.endpoint == 'loans' %}active{% endif %}">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            Loans
+          </a>
+          {% if session.role == 'admin' or session.role == 'super_admin' %}
+          <a href="{{ url_for('members') }}" class="nav-link {% if request.endpoint == 'members' %}active{% endif %}">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            Members
+          </a>
+          {% endif %}
+          {% if session.role == 'super_admin' %}
+          <a href="{{ url_for('secrets') }}" class="nav-link {% if request.endpoint == 'secrets' %}active{% endif %}">
+            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            Secrets
+          </a>
+          {% endif %}
+        </div>
+
+        <!-- Right Side -->
+        <div class="nav-right">
+          <div class="user-info">
+            <span class="user-name">{{ session.user }}</span>
+            <span class="role-badge {{ session.role }}">{{ session.role }}</span>
+          </div>
+          <a href="{{ url_for('logout') }}" class="logout-btn">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </a>
+          <button class="mobile-menu-btn" id="mobile-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Navigation Dropdown -->
+      <div class="mobile-nav" id="mobile-nav">
+        <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+          Dashboard
+        </a>
+        <a href="{{ url_for('books') }}" class="nav-link {% if request.endpoint == 'books' %}active{% endif %}">
+          Books
+        </a>
+        <a href="{{ url_for('loans') }}" class="nav-link {% if request.endpoint == 'loans' %}active{% endif %}">
+          Loans
+        </a>
+        {% if session.role == 'admin' or session.role == 'super_admin' %}
+        <a href="{{ url_for('members') }}" class="nav-link {% if request.endpoint == 'members' %}active{% endif %}">
+          Members
+        </a>
+        {% endif %}
+        {% if session.role == 'super_admin' %}
+        <a href="{{ url_for('secrets') }}" class="nav-link {% if request.endpoint == 'secrets' %}active{% endif %}">
+          Secrets
+        </a>
+        {% endif %}
+        <div style="border-top: 1px solid var(--border); margin-top: var(--space-3); padding-top: var(--space-3);">
+          <div class="nav-link" style="cursor: default;">
+            <span class="user-name">{{ session.user }}</span>
+            <span class="role-badge {{ session.role }}">{{ session.role }}</span>
+          </div>
+          <a href="{{ url_for('logout') }}" class="nav-link" style="color: var(--danger);">
+            Logout
+          </a>
+        </div>
+      </div>
+    </nav>
+    {% endif %}
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="container">
+        <div class="flash-messages">
+          {% for category, message in messages %}
+          <div class="alert alert-{{ category }} animate-fade-in">
+            <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              {% if category == 'success' %}
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              {% elif category == 'warning' %}
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              {% elif category == 'danger' %}
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+              {% else %}
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              {% endif %}
+            </svg>
+            <span class="alert-content">{{ message }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="content-area">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <span class="footer-text">Library Management System</span>
+        <span class="footer-text">Educational SQL Injection Lab</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

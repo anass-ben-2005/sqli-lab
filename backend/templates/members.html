@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Members - Library System{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">Members</h1>
+    <p class="page-subtitle">Library members and their roles</p>
+  </div>
+
+  <!-- Search -->
+  <div class="search-box">
+    <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+    <input
+      type="text"
+      class="form-input"
+      placeholder="Search by name or email..."
+      data-table-search="members-table"
+    >
+  </div>
+
+  <!-- Members Table -->
+  <div class="table-container">
+    <table class="data-table table-sticky" id="members-table">
+      <thead>
+        <tr>
+          <th>
+            <span class="sort-header" data-sort="0" data-sort-type="number">
+              ID
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="1">
+              Name
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="2">
+              Email
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="3">
+              Role
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in members %}
+        <tr>
+          <td><span class="badge badge-neutral">#{{ member.id }}</span></td>
+          <td><strong>{{ member.name }}</strong></td>
+          <td>{{ member.email }}</td>
+          <td>
+            <span class="role-badge {{ member.role }}">{{ member.role }}</span>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4">
+            <div class="empty-state">
+              <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              <h3 class="empty-state-title">No members found</h3>
+              <p class="empty-state-text">There are no members registered in the system.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

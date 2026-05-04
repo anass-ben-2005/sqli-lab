@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - Library System{% endblock %}
+
+{% block content %}
+<div class="login-page">
+  <!-- Left: Branding -->
+  <div class="login-branding">
+    <div class="login-branding-inner">
+      <div class="login-logo">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+      </div>
+      <h1>Library Management System</h1>
+      <p>An educational platform for understanding SQL injection vulnerabilities. Log in to access the dashboard, manage books, track loans, and explore how queries are constructed behind the scenes.</p>
+    </div>
+  </div>
+
+  <!-- Right: Login Form + Debug -->
+  <div class="login-form-area">
+    <div class="login-card">
+      <h2 class="login-card-title">Welcome back</h2>
+      <p class="login-card-subtitle">Enter your credentials to access the system</p>
+
+      {% if error %}
+      <div class="alert alert-danger" style="margin-bottom: var(--space-5);">
+        <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+        <span class="alert-content">{{ error }}</span>
+      </div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('login') }}">
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            class="form-input form-input-lg"
+            placeholder="Enter your username"
+            value="{{ username }}"
+            required
+            autocomplete="username"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-input form-input-lg"
+            placeholder="Enter your password"
+            required
+            autocomplete="current-password"
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-block" style="margin-top: var(--space-2);">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
+          Sign In
+        </button>
+      </form>
+
+      <div style="margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--border);">
+        <p style="font-size: 12px; color: var(--text-muted); text-align: center;">
+          This is an educational environment. Default accounts:<br>
+          <strong>admin</strong> / admin123 &nbsp;|&nbsp; <strong>superadmin</strong> / super123
+        </p>
+      </div>
+    </div>
+
+    <!-- Debug Panel -->
+    {% if raw_query %}
+    <div class="login-debug-panel">
+      <div class="card debug-card">
+        <div class="debug-header">
+          <h3 class="card-title" style="display: flex; align-items: center; gap: var(--space-2);">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #7ee787;">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            SQL Debug Panel
+          </h3>
+          <span style="font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em;">Educational</span>
+        </div>
+        <p style="font-size: 13px; color: #8b949e; margin-bottom: var(--space-3);">Raw query executed by the login form:</p>
+        <div class="query-block">{{ raw_query }}</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

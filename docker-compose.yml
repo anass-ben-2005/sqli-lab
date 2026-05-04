@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: libraryos_db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE:      librarydb
+      MYSQL_USER:          libraryuser
+      MYSQL_PASSWORD:      librarypass
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - db_data:/var/lib/mysql
+    networks: [librarynet]
+    healthcheck:
+      test: ["CMD","mysqladmin","ping","-h","localhost","-u","root","-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: ./backend
+    container_name: libraryos_web
+    ports: ["5000:5000"]
+    environment:
+      DB_HOST: db
+      DB_USER: libraryuser
+      DB_PASS: librarypass
+      DB_NAME: librarydb
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [librarynet]
+    volumes:
+      - ./backend:/app
+
+volumes:
+  db_data:
+networks:
+  librarynet:
+    driver: bridge

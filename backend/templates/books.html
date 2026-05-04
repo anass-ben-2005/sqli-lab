@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Books - Library System{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">Books</h1>
+    <p class="page-subtitle">Browse and search the library collection</p>
+  </div>
+
+  <!-- Search -->
+  <div class="search-box">
+    <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+    <input
+      type="text"
+      class="form-input"
+      placeholder="Search by title, author, or genre..."
+      data-table-search="books-table"
+    >
+  </div>
+
+  <!-- Books Table -->
+  <div class="table-container">
+    <table class="data-table table-sticky" id="books-table">
+      <thead>
+        <tr>
+          <th>
+            <span class="sort-header" data-sort="0" data-sort-type="number">
+              ID
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="1">
+              Title
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="2">
+              Author
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="3">
+              Genre
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="4" data-sort-type="number">
+              Year
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="5" data-sort-type="number">
+              Copies
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for book in books %}
+        <tr>
+          <td><span class="badge badge-neutral">#{{ book.id }}</span></td>
+          <td><strong>{{ book.title }}</strong></td>
+          <td>{{ book.author }}</td>
+          <td><span class="badge badge-info">{{ book.genre }}</span></td>
+          <td>{{ book.year }}</td>
+          <td>{{ book.copies }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+              <h3 class="empty-state-title">No books found</h3>
+              <p class="empty-state-text">The library collection is currently empty.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

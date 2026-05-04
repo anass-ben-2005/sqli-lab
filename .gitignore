@@ -1,0 +1,33 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Docker volumes (local data)
+db_data/
+volumes/
+
+# Environment variables (if you later add a .env file)
+.env
+*.env
+
+# IDE / OS junk
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+
+# Script outputs (optional)
+discover_roles.py  # if you created it, don't commit it

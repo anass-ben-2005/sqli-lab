@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Loans - Library System{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1 class="page-title">Loans</h1>
+    <p class="page-subtitle">Track book loans and returns</p>
+  </div>
+
+  <!-- Search -->
+  <div class="search-box">
+    <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+    <input
+      type="text"
+      class="form-input"
+      placeholder="Search by member or book title..."
+      data-table-search="loans-table"
+    >
+  </div>
+
+  <!-- Loans Table -->
+  <div class="table-container">
+    <table class="data-table table-sticky" id="loans-table">
+      <thead>
+        <tr>
+          <th>
+            <span class="sort-header" data-sort="0" data-sort-type="number">
+              ID
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="1">
+              Member
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="2">
+              Book
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="3">
+              Loaned At
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="4">
+              Due At
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+          <th>
+            <span class="sort-header" data-sort="5">
+              Returned At
+              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for loan in loans %}
+        <tr>
+          <td><span class="badge badge-neutral">#{{ loan.id }}</span></td>
+          <td>{{ loan.member_name }}</td>
+          <td><strong>{{ loan.book_title }}</strong></td>
+          <td>{{ loan.loaned_at[:19] if loan.loaned_at else '—' }}</td>
+          <td>{{ loan.due_at[:19] if loan.due_at else '—' }}</td>
+          <td>
+            {% if loan.returned_at %}
+              <span class="badge badge-neutral">
+                <span class="status-dot returned"></span>
+                {{ loan.returned_at[:19] }}
+              </span>
+            {% else %}
+              {% set now_str = loan.now|default('') %}
+              {% if loan.due_at and loan.due_at < now_str %}
+                <span class="badge badge-danger">
+                  <span class="status-dot overdue"></span>
+                  Not returned (Overdue)
+                </span>
+              {% else %}
+                <span class="badge badge-warning">
+                  <span class="status-dot active"></span>
+                  Not returned
+                </span>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              <h3 class="empty-state-title">No loans found</h3>
+              <p class="empty-state-text">There are no loan records in the system.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
