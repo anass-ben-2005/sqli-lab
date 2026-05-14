@@ -5,8 +5,6 @@
 
 document.addEventListener('DOMContentLoaded', function() {
   initMobileNav();
-  initTableSearch();
-  initTableSort();
   initCollapsiblePanels();
   initAlertDismiss();
 });
@@ -35,81 +33,6 @@ function initMobileNav() {
   });
 }
 
-/* ============================================
-   Table Search
-   ============================================ */
-function initTableSearch() {
-  const searchInputs = document.querySelectorAll('[data-table-search]');
-
-  searchInputs.forEach(function(input) {
-    const tableId = input.getAttribute('data-table-search');
-    const table = document.getElementById(tableId);
-    if (!table) return;
-
-    const rows = table.querySelectorAll('tbody tr');
-
-    input.addEventListener('input', function() {
-      const query = this.value.toLowerCase().trim();
-
-      rows.forEach(function(row) {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(query) ? '' : 'none';
-      });
-    });
-  });
-}
-
-/* ============================================
-   Table Sort
-   ============================================ */
-function initTableSort() {
-  const headers = document.querySelectorAll('[data-sort]');
-
-  headers.forEach(function(header) {
-    header.addEventListener('click', function() {
-      const table = header.closest('table');
-      if (!table) return;
-
-      const tbody = table.querySelector('tbody');
-      const rows = Array.from(tbody.querySelectorAll('tr'));
-      const colIndex = parseInt(header.getAttribute('data-sort'), 10);
-      const sortType = header.getAttribute('data-sort-type') || 'string';
-
-      // Toggle direction
-      const currentDir = header.getAttribute('data-sort-dir') || 'asc';
-      const newDir = currentDir === 'asc' ? 'desc' : 'asc';
-
-      // Reset other headers
-      table.querySelectorAll('[data-sort]').forEach(function(h) {
-        h.removeAttribute('data-sort-dir');
-        h.classList.remove('sorted');
-      });
-
-      header.setAttribute('data-sort-dir', newDir);
-      header.classList.add('sorted');
-
-      // Sort rows
-      rows.sort(function(a, b) {
-        let aVal = a.children[colIndex]?.textContent.trim() || '';
-        let bVal = b.children[colIndex]?.textContent.trim() || '';
-
-        if (sortType === 'number') {
-          aVal = parseFloat(aVal) || 0;
-          bVal = parseFloat(bVal) || 0;
-        }
-
-        if (aVal < bVal) return newDir === 'asc' ? -1 : 1;
-        if (aVal > bVal) return newDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-
-      // Re-append in new order
-      rows.forEach(function(row) {
-        tbody.appendChild(row);
-      });
-    });
-  });
-}
 
 /* ============================================
    Collapsible Panels

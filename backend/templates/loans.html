@@ -11,18 +11,40 @@
   </div>
 
   <!-- Search -->
-  <div class="search-box">
-    <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="11" cy="11" r="8"></circle>
-      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  <!-- Search -->
+  <form method="GET" action="/loans" style="margin-bottom:20px; display:flex;">
+    <input type="text" name="q" class="form-input" 
+           placeholder="Search by member or book title..."
+           value="{{ q or '' }}">
+    <button type="submit" class="btn" style="margin-left:8px; padding:6px 12px;">Search</button>
+  </form>
+
+  {% if raw_query %}
+  <div class="alert alert-warning" style="margin-bottom: 20px;">
+    <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+      <line x1="12" y1="9" x2="12" y2="13"></line>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
     </svg>
-    <input
-      type="text"
-      class="form-input"
-      placeholder="Search by member or book title..."
-      data-table-search="loans-table"
-    >
+    <div class="alert-content">
+      <strong>Executed query:</strong><br>
+      <code style="word-break: break-all;">{{ raw_query }}</code>
+    </div>
   </div>
+  {% endif %}
+
+  {% if db_error %}
+  <div class="alert alert-danger" style="margin-bottom: 20px;">
+    <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="15" y1="9" x2="9" y2="15"></line>
+      <line x1="9" y1="9" x2="15" y2="15"></line>
+    </svg>
+    <div class="alert-content">
+      <strong>Database error:</strong> {{ db_error }}
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Loans Table -->
   <div class="table-container">
@@ -30,15 +52,7 @@
       <thead>
         <tr>
           <th>
-            <span class="sort-header" data-sort="0" data-sort-type="number">
-              ID
-              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </span>
-          </th>
-          <th>
-            <span class="sort-header" data-sort="1">
+            <span class="sort-header" data-sort="0">
               Member
               <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -46,7 +60,7 @@
             </span>
           </th>
           <th>
-            <span class="sort-header" data-sort="2">
+            <span class="sort-header" data-sort="1">
               Book
               <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -54,7 +68,7 @@
             </span>
           </th>
           <th>
-            <span class="sort-header" data-sort="3">
+            <span class="sort-header" data-sort="2">
               Loaned At
               <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -62,7 +76,7 @@
             </span>
           </th>
           <th>
-            <span class="sort-header" data-sort="4">
+            <span class="sort-header" data-sort="3">
               Due At
               <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -70,7 +84,7 @@
             </span>
           </th>
           <th>
-            <span class="sort-header" data-sort="5">
+            <span class="sort-header" data-sort="4">
               Returned At
               <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -82,20 +96,19 @@
       <tbody>
         {% for loan in loans %}
         <tr>
-          <td><span class="badge badge-neutral">#{{ loan.id }}</span></td>
-          <td>{{ loan.member_name }}</td>
-          <td><strong>{{ loan.book_title }}</strong></td>
-          <td>{{ loan.loaned_at[:19] if loan.loaned_at else '—' }}</td>
-          <td>{{ loan.due_at[:19] if loan.due_at else '—' }}</td>
+          <td>{{ loan[1] }}</td>
+          <td><strong>{{ loan[2] }}</strong></td>
+          <td>{{ (loan[3]|string)[:19] if loan[3] else '—' }}</td>
+          <td>{{ (loan[4]|string)[:19] if loan[4] else '—' }}</td>
           <td>
-            {% if loan.returned_at %}
+            {% if loan[5] %}
               <span class="badge badge-neutral">
                 <span class="status-dot returned"></span>
-                {{ loan.returned_at[:19] }}
+                {{ (loan[5]|string)[:19] }}
               </span>
             {% else %}
-              {% set now_str = loan.now|default('') %}
-              {% if loan.due_at and loan.due_at < now_str %}
+              {% set now_str = '' %}
+              {% if loan[4] and (loan[4]|string) < now_str %}
                 <span class="badge badge-danger">
                   <span class="status-dot overdue"></span>
                   Not returned (Overdue)
@@ -111,7 +124,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="6">
+          <td colspan="5">
             <div class="empty-state">
               <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>

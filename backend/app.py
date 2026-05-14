@@ -101,10 +101,15 @@ def dashboard():
     cur = db.cursor()
     cur.execute("SELECT COUNT(*) FROM books")
     books = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM members")
-    members = cur.fetchone()[0]
-    cur.execute("SELECT COUNT(*) FROM loans WHERE returned_at IS NULL")
-    loans = cur.fetchone()[0]
+    if session.get("role") in ("admin", "super_admin"):
+        cur.execute("SELECT COUNT(*) FROM members")
+        members = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM loans WHERE returned_at IS NULL")
+        loans = cur.fetchone()[0]
+    else:
+        members = None
+        cur.execute("SELECT COUNT(*) FROM loans WHERE returned_at IS NULL AND member_id=%s", (session["user_id"],))
+        loans = cur.fetchone()[0]
     cur.close()
     last_query = session.pop("last_query", None)
     return render_template("dashboard.html",
@@ -114,48 +119,94 @@ def dashboard():
 @app.route("/books")
 @require_login
 def books():
+    q = request.args.get('q', '')
+    query = (
+        "SELECT id,title,author,genre,year,copies FROM books "
+        "WHERE title LIKE '%" + q + "%' OR author LIKE '%" + q + "%' "
+        "ORDER BY title"
+    )
     cur = get_db().cursor()
-    cur.execute("SELECT id,title,author,genre,year,copies FROM books ORDER BY title")
-    books = cur.fetchall()
+    try:
+        cur.execute(query)
+        books = cur.fetchall()
+        error = None
+    except Exception as e:
+        books = []
+        error = str(e)
     cur.close()
-    return render_template("books.html", books=books)
-
+    return render_template("books.html", books=books, q=q, raw_query=query, db_error=error)
 @app.route("/loans")
 @require_login
 def loans():
+    q = request.args.get('q', '')
     cur = get_db().cursor()
     if session.get("role") in ("admin","super_admin"):
-        cur.execute("""SELECT l.id,m.username,b.title,l.loaned_at,l.due_at,l.returned_at
-                       FROM loans l JOIN members m ON l.member_id=m.id
-                                    JOIN books   b ON l.book_id=b.id
-                       ORDER BY l.loaned_at DESC""")
+        query = (
+            "SELECT l.id,m.username,b.title,l.loaned_at,l.due_at,l.returned_at "
+            "FROM loans l JOIN members m ON l.member_id=m.id "
+            "JOIN books b ON l.book_id=b.id "
+            "WHERE m.username LIKE '%" + q + "%' OR b.title LIKE '%" + q + "%' "
+            "ORDER BY l.loaned_at DESC"
+        )
     else:
-        cur.execute("""SELECT l.id,m.username,b.title,l.loaned_at,l.due_at,l.returned_at
-                       FROM loans l JOIN members m ON l.member_id=m.id
-                                    JOIN books   b ON l.book_id=b.id
-                       WHERE l.member_id=%s ORDER BY l.loaned_at DESC""",
-                    (session["user_id"],))
-    loans = cur.fetchall()
+        # Note: Concatenating q directly. For a non-admin, they only see their loans,
+        # but the SQLi is still fully present in the WHERE clause.
+        query = (
+            "SELECT l.id,m.username,b.title,l.loaned_at,l.due_at,l.returned_at "
+            "FROM loans l JOIN members m ON l.member_id=m.id "
+            "JOIN books b ON l.book_id=b.id "
+            "WHERE l.member_id=" + str(session["user_id"]) + " "
+            "AND (b.title LIKE '%" + q + "%') "
+            "ORDER BY l.loaned_at DESC"
+        )
+    try:
+        cur.execute(query)
+        loans = cur.fetchall()
+        error = None
+    except Exception as e:
+        loans = []
+        error = str(e)
     cur.close()
-    return render_template("loans.html", loans=loans)
+    return render_template("loans.html", loans=loans, q=q, raw_query=query, db_error=error)
 
 @app.route("/members")
 @require_admin
 def members():
+    q = request.args.get('q', '')
+    query = (
+        "SELECT id,username,email,role,created_at FROM members "
+        "WHERE username LIKE '%" + q + "%' OR email LIKE '%" + q + "%' "
+        "ORDER BY id"
+    )
     cur = get_db().cursor()
-    cur.execute("SELECT id,username,email,role,created_at FROM members ORDER BY id")
-    members = cur.fetchall()
+    try:
+        cur.execute(query)
+        members = cur.fetchall()
+        error = None
+    except Exception as e:
+        members = []
+        error = str(e)
     cur.close()
-    return render_template("members.html", members=members)
+    return render_template("members.html", members=members, q=q, raw_query=query, db_error=error)
 
 @app.route("/secrets")
 @require_superadmin
 def secrets():
+    q = request.args.get('q', '')
+    query = (
+        "SELECT id,username,email,role,card_number,card_expiry,card_cvv,card_type FROM members "
+        "WHERE username LIKE '%" + q + "%'"
+    )
     cur = get_db().cursor()
-    cur.execute("SELECT id,username,email,role FROM members")
-    members = cur.fetchall()
+    try:
+        cur.execute(query)
+        members = cur.fetchall()
+        error = None
+    except Exception as e:
+        members = []
+        error = str(e)
     cur.close()
-    return render_template("secrets.html", members=members)
+    return render_template("secrets.html", members=members, q=q, raw_query=query, db_error=error)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

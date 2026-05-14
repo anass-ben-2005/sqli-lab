@@ -11,18 +11,39 @@
   </div>
 
   <!-- Search -->
-  <div class="search-box">
-    <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="11" cy="11" r="8"></circle>
-      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  <form method="GET" action="/books" style="margin-bottom:20px; display:flex;">
+    <input type="text" name="q" class="form-input" 
+           placeholder="Search by title, author, or genre..."
+           value="{{ q or '' }}">
+    <button type="submit" class="btn" style="margin-left:8px; padding:6px 12px;">Search</button>
+  </form>
+
+  {% if raw_query %}
+  <div class="alert alert-warning" style="margin-bottom: 20px;">
+    <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+      <line x1="12" y1="9" x2="12" y2="13"></line>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
     </svg>
-    <input
-      type="text"
-      class="form-input"
-      placeholder="Search by title, author, or genre..."
-      data-table-search="books-table"
-    >
+    <div class="alert-content">
+      <strong>Executed query:</strong><br>
+      <code style="word-break: break-all;">{{ raw_query }}</code>
+    </div>
   </div>
+  {% endif %}
+
+  {% if db_error %}
+  <div class="alert alert-danger" style="margin-bottom: 20px;">
+    <svg class="alert-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="15" y1="9" x2="9" y2="15"></line>
+      <line x1="9" y1="9" x2="15" y2="15"></line>
+    </svg>
+    <div class="alert-content">
+      <strong>Database error:</strong> {{ db_error }}
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Books Table -->
   <div class="table-container">
@@ -30,15 +51,7 @@
       <thead>
         <tr>
           <th>
-            <span class="sort-header" data-sort="0" data-sort-type="number">
-              ID
-              <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </span>
-          </th>
-          <th>
-            <span class="sort-header" data-sort="1">
+            <span class="sort-header" data-sort="0">
               Title
               <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -46,7 +59,7 @@
             </span>
           </th>
           <th>
-            <span class="sort-header" data-sort="2">
+            <span class="sort-header" data-sort="1">
               Author
               <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -54,7 +67,7 @@
             </span>
           </th>
           <th>
-            <span class="sort-header" data-sort="3">
+            <span class="sort-header" data-sort="2">
               Genre
               <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -62,7 +75,7 @@
             </span>
           </th>
           <th>
-            <span class="sort-header" data-sort="4" data-sort-type="number">
+            <span class="sort-header" data-sort="3" data-sort-type="number">
               Year
               <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -70,7 +83,7 @@
             </span>
           </th>
           <th>
-            <span class="sort-header" data-sort="5" data-sort-type="number">
+            <span class="sort-header" data-sort="4" data-sort-type="number">
               Copies
               <svg class="sort-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -82,16 +95,15 @@
       <tbody>
         {% for book in books %}
         <tr>
-          <td><span class="badge badge-neutral">#{{ book.id }}</span></td>
-          <td><strong>{{ book.title }}</strong></td>
-          <td>{{ book.author }}</td>
-          <td><span class="badge badge-info">{{ book.genre }}</span></td>
-          <td>{{ book.year }}</td>
-          <td>{{ book.copies }}</td>
+          <td><strong>{{ book[1] }}</strong></td>
+          <td>{{ book[2] }}</td>
+          <td><span class="badge badge-info">{{ book[3] }}</span></td>
+          <td>{{ book[4] }}</td>
+          <td>{{ book[5] }}</td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="6">
+          <td colspan="5">
             <div class="empty-state">
               <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>

@@ -11,7 +11,7 @@
   </div>
 
   <!-- Metrics Cards -->
-  <div class="grid grid-3" style="margin-bottom: var(--space-8);">
+  <div class="grid {% if session.role in ['admin', 'super_admin'] %}grid-3{% else %}grid-2{% endif %}" style="margin-bottom: var(--space-8);">
     <!-- Books Card -->
     <div class="card card-hover metric-card animate-fade-in stagger-1">
       <div class="metric-icon">
@@ -25,6 +25,7 @@
     </div>
 
     <!-- Members Card -->
+    {% if session.role in ['admin', 'super_admin'] %}
     <div class="card card-hover metric-card animate-fade-in stagger-2">
       <div class="metric-icon">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -37,6 +38,7 @@
       <div class="metric-value">{{ member_count }}</div>
       <div class="metric-label">Members</div>
     </div>
+    {% endif %}
 
     <!-- Active Loans Card -->
     <div class="card card-hover metric-card animate-fade-in stagger-3">
@@ -48,7 +50,7 @@
           <line x1="16" y1="17" x2="8" y2="17"></line>
         </svg>
       </div>
-      <div class="metric-value">{{ active_loan_count }}</div>
+      <div class="metric-value">{{ active_loans }}</div>
       <div class="metric-label">Active Loans</div>
     </div>
   </div>
